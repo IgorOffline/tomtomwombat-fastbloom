@@ -17,7 +17,7 @@ Due to a different (improved!) algorithm in 0.14.x, Bloomfilters have incompatib
 ```toml
 # Cargo.toml
 [dependencies]
-fastbloom = "0.14.0"
+fastbloom = "0.14.1"
 ```
 Basic usage:
 ```rust

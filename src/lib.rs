@@ -167,8 +167,7 @@ macro_rules! impl_bloom {
             /// ```
             #[inline]
             pub fn contains(&self, val: &(impl Hash + ?Sized)) -> bool {
-                let source_hash = self.source_hash(val);
-                self.contains_hash(source_hash)
+                self.contains_hash(self.source_hash(val))
             }
 
             /// Checks if the hash of an element is possibly in the Bloom filter.
@@ -178,12 +177,13 @@ macro_rules! impl_bloom {
             ///
             /// `true` if the item is possibly in the Bloom filter, `false` otherwise.
             #[inline]
-            pub fn contains_hash(&self, source_hash: u64) -> bool {
-                let mut hasher = DoubleHasher::new(source_hash);
+            pub fn contains_hash(&self, hash: u64) -> bool {
+                let mut hasher = DoubleHasher::new(hash);
                 (0..self.num_hashes).all(|_| {
                     let h = hasher.next();
                     self.bits.check(index(self.num_bits(), h))
                 })
+
             }
 
             /// Returns the number of hashes per item.
@@ -277,8 +277,7 @@ impl<S: BuildHasher> BloomFilter<S> {
     /// ```
     #[inline]
     pub fn insert(&mut self, val: &(impl Hash + ?Sized)) -> bool {
-        let source_hash = self.source_hash(val);
-        self.insert_hash(source_hash)
+        self.insert_hash(self.source_hash(val))
     }
 
     /// Inserts the hash of an element into the Bloom filter.
