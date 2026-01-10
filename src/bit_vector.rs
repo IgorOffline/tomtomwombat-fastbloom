@@ -126,9 +126,7 @@ impl AtomicBitVec {
     #[inline(always)]
     pub(crate) fn set(&self, index: usize) -> bool {
         let (index, bit) = coord(index);
-        let previously_contained = self.bits[index].load(Relaxed) & bit > 0;
-        self.bits[index].fetch_or(bit, Relaxed);
-        previously_contained
+        self.bits[index].fetch_or(bit, Relaxed) & bit > 0
     }
 
     #[inline]
