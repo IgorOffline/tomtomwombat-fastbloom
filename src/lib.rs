@@ -71,7 +71,7 @@ macro_rules! impl_bloom {
         #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
         pub struct $name<S = DefaultHasher> {
             bits: $bitvec,
-            num_hashes: u32,
+            num_hashes_minus_one: u32,
             hasher: S,
         }
 
@@ -178,18 +178,22 @@ macro_rules! impl_bloom {
             /// `true` if the item is possibly in the Bloom filter, `false` otherwise.
             #[inline]
             pub fn contains_hash(&self, hash: u64) -> bool {
-                let mut hasher = DoubleHasher::new(hash);
-                (0..self.num_hashes).all(|_| {
-                    let h = hasher.next();
-                    self.bits.check(index(self.num_bits(), h))
-                })
-
+                match self.bits.check(index(self.num_bits(), hash)) {
+                    false => false,
+                    true => {
+                        let mut hasher = DoubleHasher::new(hash);
+                        (0..self.num_hashes_minus_one).all(|_| {
+                            let h = hasher.next();
+                            self.bits.check(index(self.num_bits(), h))
+                        })
+                    }
+                }
             }
 
             /// Returns the number of hashes per item.
             #[inline]
             pub fn num_hashes(&self) -> u32 {
-                self.num_hashes
+                self.num_hashes_minus_one + 1
             }
 
             /// Returns the total number of in-memory bits supporting the Bloom filter.
@@ -235,7 +239,7 @@ macro_rules! impl_bloom {
 
         impl<S: BuildHasher> PartialEq for $name<S> {
             fn eq(&self, other: &Self) -> bool {
-                self.bits == other.bits && self.num_hashes == other.num_hashes
+                self.bits == other.bits && self.num_hashes() == other.num_hashes()
             }
         }
         impl<S: BuildHasher> Eq for $name<S> {}
@@ -289,9 +293,10 @@ impl<S: BuildHasher> BloomFilter<S> {
     /// `false` otherwise.
     #[inline]
     pub fn insert_hash(&mut self, hash: u64) -> bool {
-        let mut hasher = DoubleHasher::new(hash);
         let mut previously_contained = true;
-        for _ in 0..self.num_hashes {
+        previously_contained &= self.bits.set(index(self.num_bits(), hash));
+        let mut hasher = DoubleHasher::new(hash);
+        for _ in 0..self.num_hashes_minus_one {
             let h = hasher.next();
             previously_contained &= self.bits.set(index(self.num_bits(), h));
         }
@@ -402,9 +407,10 @@ impl<S: BuildHasher> AtomicBloomFilter<S> {
     /// `false` otherwise.
     #[inline]
     pub fn insert_hash(&self, hash: u64) -> bool {
-        let mut hasher = DoubleHasher::new(hash);
         let mut previously_contained = true;
-        for _ in 0..self.num_hashes {
+        previously_contained &= self.bits.set(index(self.num_bits(), hash));
+        let mut hasher = DoubleHasher::new(hash);
+        for _ in 0..self.num_hashes_minus_one {
             let h = hasher.next();
             previously_contained &= self.bits.set(index(self.num_bits(), h));
         }

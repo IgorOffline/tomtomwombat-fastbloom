@@ -19,12 +19,12 @@ pub(crate) struct AtomicBitVec {
 macro_rules! impl_bitvec {
     ($name:ident, $bits:ty) => {
         impl $name {
-            #[inline]
+            #[inline(always)]
             pub(crate) const fn len(&self) -> usize {
                 self.bits.len()
             }
 
-            #[inline]
+            #[inline(always)]
             pub(crate) const fn num_bits(&self) -> usize {
                 self.len() * u64::BITS as usize
             }
@@ -34,7 +34,7 @@ macro_rules! impl_bitvec {
                 &self.bits
             }
 
-            #[inline]
+            #[inline(always)]
             pub(crate) fn iter(&self) -> impl Iterator<Item = u64> + '_ {
                 self.bits.iter().map(Self::fetch)
             }
@@ -88,14 +88,14 @@ impl BitVec {
         previously_contained
     }
 
-    #[inline]
+    #[inline(always)]
     pub(crate) fn clear(&mut self) {
         for i in 0..self.len() {
             self.bits[i] = 0;
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub(crate) fn union(&mut self, other: &BitVec) {
         assert_eq!(self.len(), other.len(), "expected same length");
         for i in 0..self.len() {
@@ -103,7 +103,7 @@ impl BitVec {
         }
     }
 
-    #[inline]
+    #[inline(always)]
     pub(crate) fn intersect(&mut self, other: &BitVec) {
         assert_eq!(self.len(), other.len(), "expected same length");
         for i in 0..self.len() {
@@ -113,17 +113,17 @@ impl BitVec {
 }
 
 impl AtomicBitVec {
-    #[inline(always)]
+    #[inline]
     fn new(x: u64) -> AtomicU64 {
         AtomicU64::new(x)
     }
 
-    #[inline(always)]
+    #[inline]
     fn fetch(x: &AtomicU64) -> u64 {
         x.load(Relaxed)
     }
 
-    #[inline(always)]
+    #[inline]
     pub(crate) fn set(&self, index: usize) -> bool {
         let (index, bit) = coord(index);
         self.bits[index].fetch_or(bit, Relaxed) & bit > 0

@@ -8,16 +8,16 @@ The fastest Bloom filter in Rust. No accuracy compromises. Full concurrency supp
 
 ## Overview
 
-fastbloom is a fast, flexible, and accurate Bloom filter implemented in Rust. fastbloom's default hasher is SipHash-1-3 using randomized keys but can be seeded or configured to use any hasher. fastbloom is 2-400 times faster and magnitudes more accurate than existing Bloom filter implementations. fastbloom's `AtomicBloomFilter` is a concurrent Bloom filter that avoids lock contention.
+fastbloom is a fast, flexible, and accurate Bloom filter implemented in Rust. fastbloom's default hasher is SipHash-1-3 using randomized keys but can be seeded or configured to use any hasher. fastbloom is 2-20 times faster and magnitudes more accurate than existing Bloom filter implementations. fastbloom's `AtomicBloomFilter` is a concurrent Bloom filter that avoids lock contention.
 
 ## Usage
 
-Due to a different (improved!) algorithm in 0.14.x, Bloomfilters have incompatible serialization/deserialization with prior versions.
+Due to a different (improved!) algorithm in 0.15.x, Bloomfilters have incompatible serialization/deserialization with prior versions.
 
 ```toml
 # Cargo.toml
 [dependencies]
-fastbloom = "0.14.1"
+fastbloom = "0.15.0"
 ```
 Basic usage:
 ```rust

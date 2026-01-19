@@ -76,7 +76,7 @@ macro_rules! builder_with_bits {
             pub fn hashes(self, num_hashes: u32) -> $bloom<S> {
                 $bloom {
                     bits: self.data.into_iter().collect(),
-                    num_hashes,
+                    num_hashes_minus_one: num_hashes - 1,
                     hasher: self.hasher,
                 }
             }
