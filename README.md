@@ -1,8 +1,8 @@
 # fastbloom
-[![Crates.io](https://img.shields.io/crates/v/fastbloom.svg)](https://crates.io/crates/fastbloom)
-[![docs.rs](https://docs.rs/fastbloom/badge.svg)](https://docs.rs/fastbloom)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/tomtomwombat/fastbloom/blob/main/LICENSE-MIT)
-[![License: APACHE](https://img.shields.io/badge/License-Apache-blue.svg)](https://github.com/tomtomwombat/fastbloom/blob/main/LICENSE-APACHE)
+[![Github](https://img.shields.io/badge/github-8da0cb?style=for-the-badge&labelColor=555555&logo=github)](https://github.com/tomtomwombat/fastbloom)
+[![Crates.io](https://img.shields.io/badge/crates.io-fc8d62?style=for-the-badge&labelColor=555555&logo=rust)](https://crates.io/crates/fastbloom)
+[![docs.rs](https://img.shields.io/badge/docs.rs-66c2a5?style=for-the-badge&labelColor=555555&logo=docs.rs)](https://docs.rs/fastbloom)
+![Downloads](https://img.shields.io/crates/d/fastbloom?style=for-the-badge)
 
 The fastest Bloom filter in Rust. No accuracy compromises. Full concurrency support and compatible with any hasher.
 
@@ -69,13 +69,15 @@ hash(4) ──────┬─────┬───────────
 fastbloom is blazingly fast because it efficiently derives many index bits from **only one real hash per item** and leverages other research findings on Bloom filters. fastbloom employs "hash composition" on two 32-bit halves of an original 64-bit hash. Each subsequent hash is derived by combining the original hash value with a different constant using modular arithmetic and bitwise operations. This results in a set of hash functions that are effectively independent and uniformly distributed, even though they are derived from the same original hash function. Computing the composition of two original hashes is faster than re-computing the hash with a different seed. This technique is [explained in depth in this paper.](https://www.eecs.harvard.edu/~michaelm/postscripts/rsa2008.pdf)
 
 ## Speed
+- AMD Ryzen 9 5900X 12-Core Processor             (3.70 GHz)
+- 64-bit operating system, x64-based processor
 
-![perf-non-member](https://github.com/user-attachments/assets/b785160e-ed94-4035-9c2a-cb8d55be39d3)
-![perf-member](https://github.com/user-attachments/assets/c06e12ff-8193-4784-8e26-b6dabf27de19)
+![perf-non-member](https://github.com/user-attachments/assets/a825d2f7-4cd7-4b6b-a447-fd7f3dab356b)
+![perf-member](https://github.com/user-attachments/assets/998f9470-b91f-460c-ad2d-1f197160c210)
 > Hashers used:
 > - xxhash: sbbf
 > - Sip1-3: bloom, bloomfilter, probabilistic-collections
-> - ahash: fastbloom
+> - foldhash: fastbloom
 > 
 > [Benchmark source](https://github.com/tomtomwombat/bench-bloom-filters)
 
@@ -83,7 +85,7 @@ fastbloom is blazingly fast because it efficiently derives many index bits from 
 
 fastbloom does not compromise accuracy. Below is a comparison of false positive rates with other Bloom filter crates:
 
-![fp](https://github.com/user-attachments/assets/473dc8f3-6501-4f3c-94e8-1f693d4efce1)
+![fp](https://github.com/user-attachments/assets/17ddaab7-c63f-456a-9e2e-b22c7f994386)
 
 [Benchmark source](https://github.com/tomtomwombat/bench-bloom-filters)
 
