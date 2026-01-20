@@ -50,18 +50,27 @@ impl RandomDefaultHasher {
 impl Default for RandomDefaultHasher {
     #[inline]
     fn default() -> Self {
-        let mut seed = [0u8; 16];
         #[cfg(not(feature = "rand"))]
         {
-            getrandom::fill(&mut seed).expect("Unable to obtain entropy from OS/Hardware sources");
+            use foldhash::fast::RandomState;
+
+            // create two random states
+            let state_a = RandomState::default();
+            let state_b = RandomState::default();
+
+            // combine the two random states into a single 128-bit seed
+            let low = state_a.build_hasher().finish() as u128;
+            let high = state_b.build_hasher().finish() as u128;
+
+            Self::seeded(&((high << 64) | low).to_ne_bytes())
         }
         #[cfg(feature = "rand")]
         {
+            let mut seed = [0u8; 16];
             use rand::RngCore;
             rand::rng().fill_bytes(&mut seed);
+            Self::seeded(&seed)
         }
-
-        Self::seeded(&seed)
     }
 }
 
@@ -152,6 +161,24 @@ mod test {
         let h1 = RandomDefaultHasher::seeded(&[0; 16]);
         let h2 = SipHasher13::new_with_key(&[0; 16]);
         assert_eq!(hash_all(h1), hash_all(h2),);
+    }
+
+    #[test]
+    fn test_random_default_hasher() {
+        // two different instances of RandomDefaultHasher should have different seeds
+        let h1 = RandomDefaultHasher::default();
+        let h2 = RandomDefaultHasher::default();
+        assert_ne!(h1.finish(), h2.finish());
+
+        // same seed value should result in the same hash
+        let h3 = RandomDefaultHasher::seeded(&[0; 16]);
+        let h4 = RandomDefaultHasher::seeded(&[0; 16]);
+        assert_eq!(h3.finish(), h4.finish());
+
+        // different seed value should result in different hash
+        let h5 = RandomDefaultHasher::seeded(&[1; 16]);
+        let h6 = RandomDefaultHasher::seeded(&[2; 16]);
+        assert_ne!(h5.finish(), h6.finish());
     }
 }
 
