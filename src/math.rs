@@ -21,3 +21,15 @@ pub(crate) fn ceil(x: f64) -> f64 {
 pub(crate) fn ceil(x: f64) -> f64 {
     libm::ceil(x)
 }
+
+#[cfg(feature = "std")]
+#[inline]
+pub(crate) fn pow(b: f64, p: f64) -> f64 {
+    b.powf(p)
+}
+
+#[cfg(not(feature = "std"))]
+#[inline]
+pub(crate) fn pow(b: f64, p: f64) -> f64 {
+    libm::pow(b, p)
+}

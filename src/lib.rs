@@ -12,8 +12,8 @@ pub use hasher::DefaultHasher;
 use hasher::DoubleHasher;
 mod builder;
 pub use builder::{
-    AtomicBuilderWithBits, AtomicBuilderWithFalsePositiveRate, BuilderWithBits,
-    BuilderWithFalsePositiveRate,
+    expected_density, expected_false_pos, optimal_hashes, optimal_size, AtomicBuilderWithBits,
+    AtomicBuilderWithFalsePositiveRate, BuilderWithBits, BuilderWithFalsePositiveRate,
 };
 mod bit_vector;
 use bit_vector::{AtomicBitVec, BitVec};
@@ -222,6 +222,12 @@ macro_rules! impl_bloom {
                 let mut state = self.hasher.build_hasher();
                 val.hash(&mut state);
                 state.finish()
+            }
+
+            /// Returns the expected false positive rate of this bloom filter containing `num_items`.
+            pub fn expected_false_pos(&self, num_items: usize) -> f64 {
+                let density = crate::expected_density(self.num_hashes(), self.num_bits(), num_items);
+                crate::expected_false_pos(self.num_hashes(), density)
             }
         }
 
@@ -567,25 +573,47 @@ macro_rules! impl_tests {
             }
 
             #[test]
-            fn target_fp_is_accurate() {
+            fn target_fp_is_accurate_actual() {
+                target_fp_is_accurate(1..=8, 3..=6, |bloom: &mut $name, num_items: usize| {
+                    for x in member_nums(num_items) {
+                        bloom.insert_hash(x);
+                    }
+                    false_pos_rate(&bloom)
+                });
+            }
+
+            #[test]
+            fn target_fp_is_accurate_expected() {
+                target_fp_is_accurate(1..=8, 2..=7, |bloom: &mut $name, num_items: usize| {
+                    bloom.expected_false_pos(num_items)
+                });
+            }
+
+            fn target_fp_is_accurate(
+                target_fp_range: std::ops::RangeInclusive<u32>,
+                num_items_range: std::ops::RangeInclusive<u32>,
+                measure_fp: fn(&mut $name, usize) -> f64,
+            ) {
                 // actual false pos is at most 2x as high as expected
                 // this is slightly higher to account for random variance and limited time to sample false pos rate.
                 let thresh = 1.0f64;
 
                 // fp: 10%, 1%, 0.1%, etc
-                for fp_mag in 1..=8 {
+                for fp_mag in target_fp_range {
                     let fp = 1.0f64 / 10u64.pow(fp_mag) as f64;
 
                     // Expected items: 10, 100, 1000, etc
-                    for num_items_mag in 3..7 {
+                    for num_items_mag in num_items_range.clone() {
                         let num_items = 10usize.pow(num_items_mag);
+                        let allocated_bytes = crate::optimal_size(num_items, fp) >> 3;
+
+                        // Make sure we don't allocate too much
+                        assert!(allocated_bytes < 64_000_000, "About to allocate {} bytes", allocated_bytes);
+
                         let mut filter = $name::new_with_false_pos(fp)
                             .seed(&42)
                             .expected_items(num_items);
-                        for x in member_nums(num_items) {
-                            filter.insert_hash(x);
-                        }
-                        let sample_fp = false_pos_rate(&filter);
+                        let sample_fp = measure_fp(&mut filter, num_items);
                         let err = (sample_fp - fp) / fp;
                         let size_bits = filter.num_bits();
                         assert!(sample_fp < fp || err < thresh,  "err {err:}, thresh {thresh:}, num_items: {num_items:}, size bits: {size_bits:}, fp: {fp:}, sample fp: {sample_fp:}");

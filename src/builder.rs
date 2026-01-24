@@ -97,7 +97,7 @@ macro_rules! builder_with_bits {
             /// ```
             pub fn expected_items(self, expected_items: usize) -> $bloom<S> {
                 let expected_items = max(1, expected_items);
-                let hashes = optimal_hashes_f(self.data.len(), expected_items);
+                let hashes = optimal_hashes(self.data.len() * 64, expected_items);
                 self.hashes(hashes)
             }
 
@@ -207,7 +207,7 @@ macro_rules! builder_with_fp {
             /// ```
             pub fn expected_items(self, expected_items: usize) -> $bloom<S> {
                 let expected_items = max(1, expected_items);
-                let num_bits = optimal_size(expected_items as f64, self.desired_fp_rate);
+                let num_bits = optimal_size(expected_items, self.desired_fp_rate);
                 $bloom::new_builder(num_bits)
                     .hasher(self.hasher)
                     .expected_items(expected_items)
@@ -240,19 +240,89 @@ macro_rules! builder_with_fp {
 builder_with_fp!(BuilderWithFalsePositiveRate, BloomFilter);
 builder_with_fp!(AtomicBuilderWithFalsePositiveRate, AtomicBloomFilter);
 
-/// The optimal number of hashes to perform for an item given the expected number of items in the bloom filter.
-/// Proof: <https://gopiandcode.uk/logs/log-bloomfilters-debunked.html>.
-#[inline]
-fn optimal_hashes_f(num_u64s: usize, num_items: usize) -> u32 {
-    let num_bits = (num_u64s * 64) as f64;
+/// Returns the optimal (for false positive rate) number of hashes to perform for an item given the expected number of items in the bloom filter.
+pub fn optimal_hashes(num_bits: usize, num_items: usize) -> u32 {
+    // Proof: <https://gopiandcode.uk/logs/log-bloomfilters-debunked.html>.
+    let num_bits = num_bits as f64;
     let hashes = LN_2 * num_bits / num_items as f64;
-    max(hashes as u32, 1)
+    max(hashes.round() as u32, 1)
 }
 
-fn optimal_size(items_count: f64, fp_p: f64) -> usize {
+/// Returns the smallest size in bits of a Bloom filter containing `num_items` items to achieve the target false positive rate.
+pub fn optimal_size(num_items: usize, fp: f64) -> usize {
+    let num_items = num_items as f64;
     let log2_2 = LN_2 * LN_2;
-    let result = 8 * ceil(items_count * ln(fp_p) / (-8.0 * log2_2)) as usize;
+    let result = 8 * ceil(num_items * ln(fp) / (-8.0 * log2_2)) as usize;
     max(result, 64)
+}
+
+/// Returns the probability of a "1" bit in the Bloom filter.
+pub fn expected_density(hashes: u32, bits: usize, items: usize) -> f64 {
+    let total_sets = (items * hashes as usize) as f64;
+    let bits = bits as f64;
+    let prob_set = 1.0 / bits;
+    let prob_not_set = 1.0 - prob_set;
+    let prob_all_not_set = crate::math::pow(prob_not_set, total_sets);
+    1.0 - prob_all_not_set
+}
+
+/// Returns the expected false positive rate of a Bloom filter.
+pub fn expected_false_pos(hashes: u32, density: f64) -> f64 {
+    crate::math::pow(density, hashes as f64)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // optimal size should produce a FP the same.
+
+    #[test]
+    fn test_expected_false_pos() {
+        for items_mag in 1..=32 {
+            let items = 2usize.pow(items_mag);
+            for fp_mag in 1..=16 {
+                let target_fp = 1.0f64 / 10u64.pow(fp_mag) as f64;
+                let size = optimal_size(items, target_fp);
+
+                let thresh = if size < 256 {
+                    0.1 // If size is tool small results too sensitive
+                } else {
+                    0.01
+                };
+
+                let h = optimal_hashes(size, items);
+                let density = expected_density(h, size, items);
+                let expected_fp = expected_false_pos(h, density);
+                let err = (expected_fp - target_fp) / target_fp;
+                assert!(err < thresh);
+            }
+        }
+    }
+
+    fn density_err(d: f64) -> f64 {
+        (0.5 - d).abs()
+    }
+
+    #[test]
+    fn test_optimal_hashes() {
+        for bits_mag in 6..=16 {
+            let bits = 2usize.pow(bits_mag);
+            for items_mag in 1..=16 {
+                let items = 2usize.pow(items_mag);
+
+                let h = optimal_hashes(bits, items);
+
+                // Too sensitive to rounding errors
+                if h > 1000 {
+                    continue;
+                }
+                let density = expected_density(h, bits, items);
+                assert!(density_err(density) <= density_err(expected_density(h + 1, bits, items)));
+                assert!(density_err(density) <= density_err(expected_density(h - 1, bits, items)));
+            }
+        }
+    }
 }
 
 #[cfg(test)]
