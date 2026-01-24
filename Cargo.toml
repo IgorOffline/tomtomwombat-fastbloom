@@ -31,5 +31,5 @@ siphasher = { version = "1.0.0", default-features = false }
 libm = "0.2"
 
 [dev-dependencies]
-rand = "0.9"
+fastrand = "2.3.0"
 serde_cbor = "0.11.2"

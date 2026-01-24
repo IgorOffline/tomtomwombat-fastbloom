@@ -174,7 +174,6 @@ macro_rules! impl_tests {
         mod $modname {
             use super::*;
             use core::iter::repeat;
-            use rand::Rng;
 
             #[test]
             fn test_to_from_vec() {
@@ -189,10 +188,10 @@ macro_rules! impl_tests {
             fn test_only_random_inserts_are_contained() {
                 let mut vec: BitVec = repeat(0).take(80).collect();
                 let mut control = Vec::with_capacity(1000);
-                let mut rng = rand::rng();
+                let mut rng = fastrand::Rng::with_seed(4364);
 
                 for _ in 0..1000 {
-                    let index = rng.random_range(0..vec.num_bits());
+                    let index = rng.usize(0..vec.num_bits());
 
                     if !control.contains(&index) {
                         assert!(!vec.check(index));

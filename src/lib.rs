@@ -507,7 +507,6 @@ macro_rules! impl_tests {
         mod $modname {
             use super::*;
             use alloc::format;
-            use rand::{rngs::StdRng, Rng, SeedableRng};
 
             trait Seeded: BuildHasher {
                 fn seeded(seed: &[u8; 16]) -> Self;
@@ -518,14 +517,14 @@ macro_rules! impl_tests {
                 }
             }
 
-            const TRIALS: usize = 1_000_000;
+            const TRIALS: usize = 10_000_000;
 
             fn false_pos_rate<H: BuildHasher>(filter: &$name<H>) -> f64 {
                 let mut total = 0;
                 let mut false_positives = 0;
                 for x in non_member_nums() {
                     total += 1;
-                    false_positives += filter.contains(&x) as usize;
+                    false_positives += filter.contains_hash(x) as usize;
                 }
                 (false_positives as f64) / (total as f64)
             }
@@ -535,12 +534,12 @@ macro_rules! impl_tests {
             }
 
             fn non_member_nums() -> impl Iterator<Item = u64> {
-                random_numbers(TRIALS, 7).map(|x| x + u32::MAX as u64)
+                random_numbers(TRIALS, 7).map(|x| x + (u64::MAX >> 1))
             }
 
             fn random_numbers(num: usize, seed: u64) -> impl Iterator<Item = u64> {
-                let mut rng = StdRng::seed_from_u64(seed);
-                (0..=num).map(move |_| rng.random::<u32>() as u64)
+                let mut rng = fastrand::Rng::with_seed(seed);
+                (0..=num).map(move |_| rng.u64(0..(u64::MAX >> 1)))
             }
 
             #[test]
@@ -569,18 +568,25 @@ macro_rules! impl_tests {
 
             #[test]
             fn target_fp_is_accurate() {
-                let thresh = 2.0f64;
-                for mag in 1..=6 {
-                    let fp = 1.0f64 / 10u64.pow(mag) as f64;
-                    for num_items_mag in 1..7 {
+                // actual false pos is at most twice as high as expected
+                // this is slightly higher to account for random variance and limited time to sample false pos rate.
+                let thresh = 1.0f64;
+
+                // fp: 10%, 1%, 0.1%, etc
+                for fp_mag in 1..=7 {
+                    let fp = 1.0f64 / 10u64.pow(fp_mag) as f64;
+
+                    // Expected items: 10, 100, 1000, etc
+                    for num_items_mag in 3..8 {
                         let num_items = 10usize.pow(num_items_mag);
                         let mut filter = $name::new_with_false_pos(fp)
                             .seed(&42)
                             .expected_items(num_items);
                         filter.extend(member_nums(num_items));
                         let sample_fp = false_pos_rate(&filter);
-                        let err = (fp - sample_fp).abs() / fp;
-                        assert!(sample_fp < fp || err < thresh,  "err {err:}, thresh {thresh:}, num_items: {num_items:}, fp: {fp:}, sample fp: {sample_fp:}");
+                        let err = (sample_fp - fp) / fp;
+                        let size_bits = filter.num_bits();
+                        assert!(sample_fp < fp || err < thresh,  "err {err:}, thresh {thresh:}, num_items: {num_items:}, size bits: {size_bits:}, fp: {fp:}, sample fp: {sample_fp:}");
                     }
                 }
             }
@@ -714,8 +720,8 @@ macro_rules! impl_tests {
             #[test]
             fn test_seeded_hash_from_hashes_depth() {
                 for size in [1, 10, 100, 1000] {
-                    let mut rng = StdRng::seed_from_u64(524323);
-                    let mut hasher = DoubleHasher::new(rng.random_range(0..u64::MAX));
+                    let mut rng = fastrand::Rng::with_seed(524323);
+                    let mut hasher = DoubleHasher::new(rng.u64(..));
                     let mut seeded_hash_counts: Vec<_> = repeat(0).take(size).collect();
                     for _ in 0..(size * 10_000) {
                         let hi = hasher.next();
