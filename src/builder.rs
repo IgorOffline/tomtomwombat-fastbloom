@@ -246,7 +246,7 @@ fn optimal_hashes_f(num_u64s: usize, num_items: usize) -> u32 {
 fn optimal_size(items_count: f64, fp_p: f64) -> usize {
     let log2_2 = LN_2 * LN_2;
     let result = 8 * ceil(items_count * ln(fp_p) / (-8.0 * log2_2)) as usize;
-    max(result, 512)
+    max(result, 64)
 }
 
 #[cfg(test)]
