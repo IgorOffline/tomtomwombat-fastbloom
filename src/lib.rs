@@ -517,7 +517,7 @@ macro_rules! impl_tests {
                 }
             }
 
-            const TRIALS: usize = 10_000_000;
+            const TRIALS: usize = 20_000_000;
 
             fn false_pos_rate<H: BuildHasher>(filter: &$name<H>) -> f64 {
                 let mut total = 0;
@@ -534,12 +534,12 @@ macro_rules! impl_tests {
             }
 
             fn non_member_nums() -> impl Iterator<Item = u64> {
-                random_numbers(TRIALS, 7).map(|x| x + (u64::MAX >> 1))
+                random_numbers(TRIALS, 7)
             }
 
             fn random_numbers(num: usize, seed: u64) -> impl Iterator<Item = u64> {
                 let mut rng = fastrand::Rng::with_seed(seed);
-                (0..=num).map(move |_| rng.u64(0..(u64::MAX >> 1)))
+                (0..=num).map(move |_| rng.u64(..))
             }
 
             #[test]
@@ -568,21 +568,23 @@ macro_rules! impl_tests {
 
             #[test]
             fn target_fp_is_accurate() {
-                // actual false pos is at most twice as high as expected
+                // actual false pos is at most 2x as high as expected
                 // this is slightly higher to account for random variance and limited time to sample false pos rate.
                 let thresh = 1.0f64;
 
                 // fp: 10%, 1%, 0.1%, etc
-                for fp_mag in 1..=7 {
+                for fp_mag in 1..=8 {
                     let fp = 1.0f64 / 10u64.pow(fp_mag) as f64;
 
                     // Expected items: 10, 100, 1000, etc
-                    for num_items_mag in 3..8 {
+                    for num_items_mag in 3..7 {
                         let num_items = 10usize.pow(num_items_mag);
                         let mut filter = $name::new_with_false_pos(fp)
                             .seed(&42)
                             .expected_items(num_items);
-                        filter.extend(member_nums(num_items));
+                        for x in member_nums(num_items) {
+                            filter.insert_hash(x);
+                        }
                         let sample_fp = false_pos_rate(&filter);
                         let err = (sample_fp - fp) / fp;
                         let size_bits = filter.num_bits();
@@ -685,7 +687,9 @@ macro_rules! impl_tests {
                         let num_bits = 1 << num_bits_mag;
 
                         let mut filter = $name::new_builder(num_bits).expected_items(size);
-                        filter.extend(member_nums(size));
+                        for x in member_nums(size) {
+                            filter.insert_hash(x);
+                        }
 
                         let fp = false_pos_rate(&filter);
 
