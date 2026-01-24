@@ -86,6 +86,8 @@ macro_rules! builder_with_bits {
             #[doc = concat!("to maximize Bloom filter accuracy (minimize false positives chance on [`", stringify!($bloom), "::contains`]).")]
             /// More or less than `expected_items` may be inserted into Bloom filter.
             ///
+            /// Note: `expected_items` will internally be set to 1 if 0 is specified.
+            ///
             /// # Examples
             ///
             /// ```
@@ -94,6 +96,7 @@ macro_rules! builder_with_bits {
             #[doc = concat!("let bloom = ", stringify!($bloom), "::with_num_bits(1024).expected_items(500);")]
             /// ```
             pub fn expected_items(self, expected_items: usize) -> $bloom<S> {
+                let expected_items = max(1, expected_items);
                 let hashes = optimal_hashes_f(self.data.len(), expected_items);
                 self.hashes(hashes)
             }
@@ -193,6 +196,8 @@ macro_rules! builder_with_fp {
             #[doc = concat!("to maximize Bloom filter accuracy (minimize false positives chance on [`", stringify!($bloom), "::contains`]).")]
             /// More or less than `expected_items` may be inserted into Bloom filter.
             ///
+            /// Note: `expected_items` will internally be set to 1 if 0 is specified.
+            ///
             /// # Examples
             ///
             /// ```
@@ -201,6 +206,7 @@ macro_rules! builder_with_fp {
             #[doc = concat!("let bloom = ", stringify!($bloom), "::with_false_pos(0.001).expected_items(500);")]
             /// ```
             pub fn expected_items(self, expected_items: usize) -> $bloom<S> {
+                let expected_items = max(1, expected_items);
                 let num_bits = optimal_size(expected_items as f64, self.desired_fp_rate);
                 $bloom::new_builder(num_bits)
                     .hasher(self.hasher)
