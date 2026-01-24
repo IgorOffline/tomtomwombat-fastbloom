@@ -53,7 +53,7 @@ macro_rules! builder_with_bits {
             ///
             /// ```
             #[doc = concat!("use fastbloom::", stringify!($bloom), ";")]
-            /// use ahash::RandomState;
+            /// use foldhash::fast::RandomState;
             ///
             #[doc = concat!("let bloom = ", stringify!($bloom), "::with_num_bits(1024).hasher(RandomState::default()).hashes(4);")]
             /// ```
@@ -81,10 +81,10 @@ macro_rules! builder_with_bits {
                 }
             }
 
-            /// "Consumes" this builder, using the provided `expected_num_items` to return an
-            #[doc = concat!("empty [`", stringify!($bloom), "`]. The number of hashes is optimized based on `expected_num_items`")]
+            /// "Consumes" this builder, using the provided `expected_items` to return an
+            #[doc = concat!("empty [`", stringify!($bloom), "`]. The number of hashes is optimized based on `expected_items`")]
             #[doc = concat!("to maximize Bloom filter accuracy (minimize false positives chance on [`", stringify!($bloom), "::contains`]).")]
-            /// More or less than `expected_num_items` may be inserted into Bloom filter.
+            /// More or less than `expected_items` may be inserted into Bloom filter.
             ///
             /// # Examples
             ///
@@ -93,8 +93,8 @@ macro_rules! builder_with_bits {
             ///
             #[doc = concat!("let bloom = ", stringify!($bloom), "::with_num_bits(1024).expected_items(500);")]
             /// ```
-            pub fn expected_items(self, expected_num_items: usize) -> $bloom<S> {
-                let hashes = optimal_hashes_f(self.data.len(), expected_num_items);
+            pub fn expected_items(self, expected_items: usize) -> $bloom<S> {
+                let hashes = optimal_hashes_f(self.data.len(), expected_items);
                 self.hashes(hashes)
             }
 
@@ -177,7 +177,7 @@ macro_rules! builder_with_fp {
             ///
             /// ```
             #[doc = concat!("use fastbloom::", stringify!($bloom), ";")]
-            /// use ahash::RandomState;
+            /// use foldhash::fast::RandomState;
             ///
             #[doc = concat!("let bloom = ", stringify!($bloom), "::with_false_pos(0.001).hasher(RandomState::default()).expected_items(100);")]
             /// ```
@@ -188,10 +188,10 @@ macro_rules! builder_with_fp {
                 }
             }
 
-            /// "Consumes" this builder, using the provided `expected_num_items` to return an
-            #[doc = concat!("empty [`", stringify!($bloom), "`]. The number of hashes is optimized based on `expected_num_items`")]
+            /// "Consumes" this builder, using the provided `expected_items` to return an
+            #[doc = concat!("empty [`", stringify!($bloom), "`]. The number of hashes is optimized based on `expected_items`")]
             #[doc = concat!("to maximize Bloom filter accuracy (minimize false positives chance on [`", stringify!($bloom), "::contains`]).")]
-            /// More or less than `expected_num_items` may be inserted into Bloom filter.
+            /// More or less than `expected_items` may be inserted into Bloom filter.
             ///
             /// # Examples
             ///
@@ -200,11 +200,11 @@ macro_rules! builder_with_fp {
             ///
             #[doc = concat!("let bloom = ", stringify!($bloom), "::with_false_pos(0.001).expected_items(500);")]
             /// ```
-            pub fn expected_items(self, expected_num_items: usize) -> $bloom<S> {
-                let num_bits = optimal_size(expected_num_items as f64, self.desired_fp_rate);
+            pub fn expected_items(self, expected_items: usize) -> $bloom<S> {
+                let num_bits = optimal_size(expected_items as f64, self.desired_fp_rate);
                 $bloom::new_builder(num_bits)
                     .hasher(self.hasher)
-                    .expected_items(expected_num_items)
+                    .expected_items(expected_items)
             }
 
             #[doc = concat!("\"Consumes\" this builder and constructs a [`", stringify!($bloom), "`] containing")]
@@ -245,7 +245,7 @@ fn optimal_hashes_f(num_u64s: usize, num_items: usize) -> u32 {
 
 fn optimal_size(items_count: f64, fp_p: f64) -> usize {
     let log2_2 = LN_2 * LN_2;
-    let result = 8 * ceil((items_count) * ln(fp_p) / (-8.0 * log2_2)) as usize;
+    let result = 8 * ceil(items_count * ln(fp_p) / (-8.0 * log2_2)) as usize;
     max(result, 512)
 }
 

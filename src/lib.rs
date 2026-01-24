@@ -61,7 +61,7 @@ macro_rules! impl_bloom {
         /// Use any hasher:
         /// ```rust
         #[doc = concat!("use fastbloom::", stringify!($name), ";")]
-        /// use ahash::RandomState;
+        /// use foldhash::fast::RandomState;
         ///
         #[doc = concat!("let filter = ", stringify!($name), "::with_num_bits(1024)")]
         ///     .hasher(RandomState::default())

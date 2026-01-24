@@ -38,7 +38,7 @@ assert!(filter.contains("🦀"));
 Use any hasher:
 ```rust
 use fastbloom::BloomFilter;
-use ahash::RandomState;
+use foldhash::fast::RandomState;
 
 let filter = BloomFilter::with_num_bits(1024)
     .hasher(RandomState::default())
