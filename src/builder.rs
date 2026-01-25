@@ -245,7 +245,7 @@ pub fn optimal_hashes(num_bits: usize, num_items: usize) -> u32 {
     // Proof: <https://gopiandcode.uk/logs/log-bloomfilters-debunked.html>.
     let num_bits = num_bits as f64;
     let hashes = LN_2 * num_bits / num_items as f64;
-    max(hashes.round() as u32, 1)
+    max(round(hashes) as u32, 1)
 }
 
 /// Returns the smallest size in bits of a Bloom filter containing `num_items` items to achieve the target false positive rate.

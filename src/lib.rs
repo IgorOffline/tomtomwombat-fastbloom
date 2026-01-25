@@ -590,8 +590,8 @@ macro_rules! impl_tests {
             }
 
             fn target_fp_is_accurate(
-                target_fp_range: std::ops::RangeInclusive<u32>,
-                num_items_range: std::ops::RangeInclusive<u32>,
+                target_fp_range: core::ops::RangeInclusive<u32>,
+                num_items_range: core::ops::RangeInclusive<u32>,
                 measure_fp: fn(&mut $name, usize) -> f64,
             ) {
                 // actual false pos is at most 2x as high as expected

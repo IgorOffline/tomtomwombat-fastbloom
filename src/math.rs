@@ -33,3 +33,15 @@ pub(crate) fn pow(b: f64, p: f64) -> f64 {
 pub(crate) fn pow(b: f64, p: f64) -> f64 {
     libm::pow(b, p)
 }
+
+#[cfg(feature = "std")]
+#[inline]
+pub(crate) fn round(x: f64) -> f64 {
+    x.round()
+}
+
+#[cfg(not(feature = "std"))]
+#[inline]
+pub(crate) fn round(x: f64) -> f64 {
+    libm::round(x)
+}
